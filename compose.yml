@@ -1,0 +1,7 @@
+services:
+  stock-rss:
+    image: ghcr.io/gauravdash/stock-rss:latest
+    container_name: stock-rss
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
