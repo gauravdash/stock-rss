@@ -141,24 +141,29 @@ def needs_update():
 
 @app.route('/rss')
 def rss_feed():
-    # Update only if last update > 60 mins ago
     if needs_update():
         fetch_index_data()
 
-    # Generate GUID from DATA_STORE content
-    data_hash = hashlib.md5(json.dumps(DATA_STORE, sort_keys=True).encode()).hexdigest()
+    # Ignore timestamps in GUID calculation
+    hashable_data = {
+        name: {k: v for k, v in info.items() if k != 'timestamp'}
+        for name, info in DATA_STORE.items()
+    }
+    data_hash = hashlib.md5(json.dumps(hashable_data, sort_keys=True).encode()).hexdigest()
 
     fg = FeedGenerator()
     fg.title('Stock Index Latest Values & Returns')
     fg.link(href='http://localhost:5000/rss')
     fg.description('Latest index values with daily, monthly, and yearly returns')
+    fg.generator("Stock RSS Feed Generator")
+    fg.language('en')
 
     table_html = build_html_table()
 
     fe = fg.add_entry()
-    fe.content(content=f"{table_html}", type='CDATA')
     fe.title("Latest Index Data & Returns")
-    fe.guid(data_hash, permalink=False)  # Unique ID based on data content
+    fe.content(content=f"{table_html}", type='CDATA')
+    fe.guid(data_hash, permalink=False)
 
     if DATA_STORE:
         latest_time = max(info['timestamp'] for info in DATA_STORE.values())
@@ -166,7 +171,7 @@ def rss_feed():
         latest_time = int(time.time())
     fe.pubDate(time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(latest_time)))
 
-    return Response(fg.rss_str(pretty=True), mimetype='application/rss+xml')
+    return Response(fg.rss_str(pretty=True), mimetype='application/rss+xml; charset=utf-8')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
