@@ -9,7 +9,11 @@ import json
 INDICES = {
     "FTSE 100": "^FTSE",
     "S&P 500": "^GSPC",
-    "Nifty 50": "^NSEI"
+    "Nifty 50": "^NSEI",
+    "INR/GBP": "GBPINR=X",
+    "GBP/USD": "GBPUSD=X",
+    "Crude Oil": "CL=F",
+    "Gold": "GC=F"
 }
 UPDATE_INTERVAL_SECONDS = 60 * 60  # 60 minutes
 DATA_STORE = {}  # { name: {value, 1d, 1m, 1y, status, timestamp} }
@@ -27,12 +31,23 @@ def fetch_index_data():
             except Exception:
                 current_value = ticker.info.get('regularMarketPrice')
 
+            # Apply display formatting based on value range
+            if current_value is not None:
+                if current_value < 100:
+                    display_value = f"{current_value:.2f}"
+                elif current_value < 1000:
+                    display_value = f"{current_value:.1f}"
+                else:
+                    display_value = f"{current_value:.0f}"
+            else:
+                display_value = "N/A"
+
             # Market status
             try:
                 market_state = ticker.info.get('marketState', '').upper()
                 if market_state == "REGULAR":
                     status = "Open"
-                elif market_state in ("CLOSED", "POST", "PRE"):
+                elif market_state in ("CLOSED", "POST", "PRE", "POSTPOST"):
                     status = "Closed"
                 else:
                     status = "Unknown"
@@ -58,7 +73,7 @@ def fetch_index_data():
             # Store results
             timestamp = int(time.time())
             DATA_STORE[name] = {
-                'value': int(round(current_value)),
+                'value': display_value,
                 '1d': round(one_day_return, 1) if one_day_return is not None else None,
                 '1m': round(one_month_return, 1) if one_month_return is not None else None,
                 '1y': round(one_year_return, 1) if one_year_return is not None else None,
@@ -69,7 +84,7 @@ def fetch_index_data():
             # Print to console
             readable_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))
             print(
-                f"{name:<10} | {DATA_STORE[name]['value']:<6} | "
+                f"{name:<10} | {display_value:<6} | "
                 f"1D: {DATA_STORE[name]['1d']}% | "
                 f"1M: {DATA_STORE[name]['1m']}% | "
                 f"1Y: {DATA_STORE[name]['1y']}% | "
