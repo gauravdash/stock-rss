@@ -47,7 +47,7 @@ def fetch_index_data():
                 market_state = ticker.info.get('marketState', '').upper()
                 if market_state == "REGULAR":
                     status = "Open"
-                elif market_state in ("CLOSED", "POST", "PRE", "POSTPOST"):
+                elif market_state in ("CLOSED", "POST", "PRE", "POSTPOST", "PREPRE"):
                     status = "Closed"
                 else:
                     status = "Unknown"
