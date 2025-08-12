@@ -156,8 +156,8 @@ def rss_feed():
     table_html = build_html_table()
 
     fe = fg.add_entry()
+    fe.content(content=f"{table_html}", type='CDATA')
     fe.title("Latest Index Data & Returns")
-    fe.description(table_html)
     fe.guid(data_hash, permalink=False)  # Unique ID based on data content
 
     if DATA_STORE:
