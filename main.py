@@ -12,7 +12,7 @@ INDICES = {
     "Nifty 50": "^NSEI"
 }
 UPDATE_INTERVAL_SECONDS = 60 * 60  # 60 minutes
-DATA_STORE = {}  # { name: {value, 1d, 1m, 1y, timestamp} }
+DATA_STORE = {}  # { name: {value, 1d, 1m, 1y, status, timestamp} }
 
 # --- Fetch Index Data ---
 def fetch_index_data():
@@ -27,21 +27,33 @@ def fetch_index_data():
             except Exception:
                 current_value = ticker.info.get('regularMarketPrice')
 
-            # Download historical data with adjusted prices
+            # Market status
+            try:
+                market_state = ticker.info.get('marketState', '').upper()
+                if market_state == "REGULAR":
+                    status = "Open"
+                elif market_state in ("CLOSED", "POST", "PRE"):
+                    status = "Closed"
+                else:
+                    status = "Unknown"
+            except Exception:
+                status = "Unknown"
+
+            # Download historical data
             hist = yf.download(symbol, period="1y", interval="1d", progress=False, auto_adjust=True)
             if hist.empty:
                 raise ValueError("No historical data returned")
 
-            # Extract scalar prices
+            # Extract prices
             last_close = hist['Close'].iloc[-1].item()
             prev_close = hist['Close'].iloc[-2].item()
             month_ago = hist['Close'].iloc[-21].item() if len(hist) >= 21 else None
             year_ago = hist['Close'].iloc[0].item()
 
             # Calculate returns
-            one_day_return = ((last_close - prev_close) / prev_close) * 100 if prev_close is not None else None
-            one_month_return = ((last_close - month_ago) / month_ago) * 100 if month_ago is not None else None
-            one_year_return = ((last_close - year_ago) / year_ago) * 100 if year_ago is not None else None
+            one_day_return = ((last_close - prev_close) / prev_close) * 100 if prev_close else None
+            one_month_return = ((last_close - month_ago) / month_ago) * 100 if month_ago else None
+            one_year_return = ((last_close - year_ago) / year_ago) * 100 if year_ago else None
 
             # Store results
             timestamp = int(time.time())
@@ -50,6 +62,7 @@ def fetch_index_data():
                 '1d': round(one_day_return, 1) if one_day_return is not None else None,
                 '1m': round(one_month_return, 1) if one_month_return is not None else None,
                 '1y': round(one_year_return, 1) if one_year_return is not None else None,
+                'status': status,
                 'timestamp': timestamp
             }
 
@@ -59,7 +72,8 @@ def fetch_index_data():
                 f"{name:<10} | {DATA_STORE[name]['value']:<6} | "
                 f"1D: {DATA_STORE[name]['1d']}% | "
                 f"1M: {DATA_STORE[name]['1m']}% | "
-                f"1Y: {DATA_STORE[name]['1y']}% "
+                f"1Y: {DATA_STORE[name]['1y']}% | "
+                f"Status: {status} "
                 f"(as of {readable_time})"
             )
 
@@ -83,6 +97,7 @@ def build_html_table():
     rows = ""
     for index_name, info in DATA_STORE.items():
         value = info['value']
+        status = info.get('status', "Unknown")
         ret_1d = f"{info['1d']}%" if info['1d'] is not None else "N/A"
         ret_1m = f"{info['1m']}%" if info['1m'] is not None else "N/A"
         ret_1y = f"{info['1y']}%" if info['1y'] is not None else "N/A"
@@ -91,6 +106,7 @@ def build_html_table():
         rows += f"""
         <tr>
             <td style="text-align:left;">{index_name}</td>
+            <td style="text-align:center;">{status}</td>
             <td style="text-align:right;">{value}</td>
             {style_return(ret_1d)}
             {style_return(ret_1m)}
@@ -122,6 +138,7 @@ def build_html_table():
     <table>
         <tr>
             <th>Index</th>
+            <th>Status</th>
             <th>Value</th>
             <th>1D Return</th>
             <th>1M Return</th>
@@ -175,4 +192,3 @@ def rss_feed():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
