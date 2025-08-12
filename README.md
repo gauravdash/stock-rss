@@ -1,7 +1,6 @@
 # 📈 Stock Indices RSS Feed
 
-A lightweight Python + Flask service that fetches **stock market indices** and serves them in an **RSS feed** with a clean HTML table.  
-It includes **FTSE 100**, **S&P 500**, and **Nifty 50** by default.
+A lightweight Python + Flask service that fetches **stock market indices** and serves them in an **RSS feed**.
 
 ## Features
 - **On-demand updates** — data is fetched only when requested via `/rss` endpoint (cached for 60 minutes)
