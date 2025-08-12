@@ -170,7 +170,7 @@ def rss_feed():
 
     fg = FeedGenerator()
     fg.title('Stock Index Latest Values & Returns')
-    fg.link(href='http://localhost:5000/rss')
+    fg.link(href='http://localhost:5000/web')
     fg.description('Latest index values with daily, monthly, and yearly returns')
     fg.generator("Stock RSS Feed Generator")
     fg.language('en')
@@ -179,6 +179,7 @@ def rss_feed():
 
     fe = fg.add_entry()
     fe.title("Latest Index Data & Returns")
+    fe.link(href="http://localhost:5000/web", rel="alternate")
     fe.content(content=f"{table_html}", type='CDATA')
     fe.guid(data_hash, permalink=False)
 
@@ -189,6 +190,24 @@ def rss_feed():
     fe.pubDate(time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(latest_time)))
 
     return Response(fg.rss_str(pretty=True), mimetype='application/rss+xml; charset=utf-8')
+
+@app.route('/web')
+def html_table_view():
+    if needs_update():
+        fetch_index_data()
+
+    html_content = f"""
+    <html>
+    <head>
+        <title>Stock Index Latest Values & Returns</title>
+    </head>
+    <body>
+        <h2>Stock Index Latest Values & Returns</h2>
+        {build_html_table()}
+    </body>
+    </html>
+    """
+    return Response(html_content, mimetype='text/html; charset=utf-8')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
